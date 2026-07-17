@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBM 事项卡录入</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;background:#f5f5f5;color:#333;min-height:100vh}
+.container{max-width:820px;margin:0 auto;padding:20px}
+.login-box{background:#fff;border-radius:12px;padding:40px;margin-top:60px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.login-box h1{font-size:24px;margin-bottom:8px}
+.login-box p{color:#999;margin-bottom:24px;font-size:14px}
+.login-box select{width:240px;padding:10px 16px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:20px}
+.login-box button{display:block;width:240px;margin:0 auto;padding:12px;background:#e65c00;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+.main{display:none;background:#fff;border-radius:12px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #eee}
+.header h2{font-size:20px}
+.header .user{color:#e65c00}
+.header .date{color:#999;font-size:14px}
+.logout{color:#999;cursor:pointer;font-size:14px}
+.section{margin-bottom:24px}
+.section-title{font-size:15px;font-weight:600;margin-bottom:12px}
+.task-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.task-table th{background:#fafafa;padding:8px 6px;text-align:left;font-size:13px;color:#666;border-bottom:2px solid #eee}
+.task-table td{padding:6px 4px;border-bottom:1px solid #f0f0f0}
+.task-table input,.task-table select{width:100%;padding:6px 4px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px}
+.task-table input:focus,.task-table select:focus{outline:none;border-color:#e65c00}
+.del-row{color:#ccc;cursor:pointer;font-size:18px;text-align:center}
+.del-row:hover{color:#e65c00}
+.add-row{display:inline-block;padding:6px 16px;background:none;border:1px dashed #ccc;border-radius:6px;color:#999;cursor:pointer;font-size:13px;margin-top:4px}
+.add-row:hover{border-color:#e65c00;color:#e65c00}
+.sub-title{font-size:13px;color:#666;margin-bottom:8px}
+.sub-table{width:100%;border-collapse:collapse;margin-bottom:4px}
+.sub-table td{padding:4px}
+.sub-table input{width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px}
+.summary{display:flex;gap:16px;margin-bottom:24px}
+.summary-item{display:flex;align-items:center;gap:6px}
+.summary-item label{font-size:13px;color:#666;white-space:nowrap}
+.summary-item input{width:50px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px;text-align:center}
+.output-section{background:#fafafa;border-radius:8px;padding:20px}
+.output-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.output-header span{font-weight:600;font-size:14px}
+.actions{display:flex;gap:8px}
+.btn{padding:8px 20px;border:none;border-radius:6px;font-size:14px;cursor:pointer}
+.btn-primary{background:#e65c00;color:#fff}
+.btn-secondary{background:#eee;color:#666}
+.btn-success{background:#2ecc71;color:#fff}
+.btn:hover{opacity:.85}
+pre{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:16px;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;min-height:120px}
+.copied{color:#2ecc71;font-size:12px;display:none}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:999;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:12px;padding:24px;width:500px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-box h3{font-size:16px;margin-bottom:12px}
+.modal-box textarea{width:100%;height:120px;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit}
+.modal-box textarea:focus{outline:none;border-color:#e65c00}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.modal-cancel{background:#eee;color:#666;padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+.modal-ok{background:#e65c00;color:#fff;padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+.task-input{cursor:pointer;background:#fff}
+.task-input:hover{border-color:#e65c00}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="login-box" id="loginBox">
+  <h1>TBM 事项卡录入</h1>
+  <p>选择你的名字开始填写</p>
+  <select id="nameSelect">
+    <option value="">请选择...</option>
+    <option>刘振杰</option><option>潘王泰龙</option><option>王鑫</option>
+    <option>牛家康</option><option>徐英杰</option><option>谭文博</option><option>戴家兴</option>
+  </select>
+  <button onclick="login()">进入</button>
+</div>
+
+<div class="main" id="mainForm">
+  <div class="header">
+    <div><h2>个人事项卡</h2><span class="user" id="displayName"></span></div>
+    <div><span class="date" id="displayDate"></span><span class="logout" onclick="logout()" style="margin-left:12px">退出</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">本周事项</div>
+    <table class="task-table">
+      <thead><tr><th style="width:22%">项目</th><th style="width:12%">阶段</th><th style="width:26%">事项</th><th style="width:14%">截止</th><th style="width:18%">风险度</th><th style="width:8%"></th></tr></thead>
+      <tbody id="taskBody"></tbody>
+    </table>
+    <button class="add-row" onclick="addTask()">+ 添加事项</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">本周新增项目</div>
+    <p class="sub-title">销售或其他渠道直接分配的新项目</p>
+    <table class="sub-table" id="newItemsTable"><tbody>
+      <tr><td style="width:18%"><input type="text" class="new-region" placeholder="区域"></td>
+          <td style="width:32%"><input type="text" class="new-project" placeholder="项目名称"></td>
+          <td style="width:22%"><select class="new-phase"><option value="">阶段</option><option>前期跟踪</option><option>投标中</option><option>评标中</option><option>合同中</option><option>已签合同</option></select></td>
+          <td style="width:18%"><input type="text" class="new-date" placeholder="接到日期"></td><td></td></tr>
+    </tbody></table>
+    <button class="add-row" onclick="addNewItem()">+ 添加</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">需协调事项</div>
+    <p class="sub-title">需要跨部门协调的事项</p>
+    <table class="sub-table" id="helpTable"><tbody>
+      <tr><td style="width:30%"><input type="text" class="help-item" placeholder="事项"></td>
+          <td style="width:20%"><input type="text" class="help-source" placeholder="协调部门"></td>
+          <td style="width:35%"><input type="text" class="help-reason" placeholder="具体做什么"></td><td></td></tr>
+    </tbody></table>
+    <button class="add-row" onclick="addHelp()">+ 添加</button>
+  </div>
+
+  <div class="output-section">
+    <div class="output-header">
+      <span>生成的 Markdown（复制到 Obsidian） <a href="#" onclick="setFeishuUrl();return false" style="font-size:12px;color:#999;margin-left:12px">⚙ 配置飞书</a></span>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="generate()">生成</button>
+        <button class="btn btn-success" onclick="copyMD()">复制</button>
+        <button class="btn btn-secondary" onclick="submitData()" id="submitBtn">📤 提交</button>
+        <span id="submitStatus" style="font-size:12px;color:#999;margin-left:8px"></span>
+      </div>
+    </div>
+    <pre id="output"></pre>
+    <span class="copied" id="copiedMsg">已复制到剪贴板</span>
+  </div>
+</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <h3 id="modalTitle">编辑事项</h3>
+    <textarea id="modalText" placeholder="输入事项详情..."></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">取消</button>
+      <button class="modal-ok" onclick="saveModal()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Projects Datalist -->
+<datalist id="projectList">
+<option value="JSW 1324 项目群（印度）"><option value="JSW 864 项目群（印度）">
+<option value="AVAADA Jam（印度）"><option value="ACME Shapar 100MW（印度）">
+<option value="ACME Urja 64MW（印度）"><option value="ACME Renewtech 100MW（印度）">
+<option value="ACME Jam 176MW（印度）"><option value="Unex（哈萨克）">
+<option value="GEC 叶列门托（哈萨克）"><option value="GEC 谢列克（哈萨克）">
+<option value="特变乌兹 20MW（乌兹）"><option value="柬埔寨师奈泰克（柬埔寨）">
+<option value="菲律宾 Aboitiz 49.99MW（菲律宾）"><option value="ACWA BASH2（乌兹）">
+<option value="智利 QE Calbuco 25MW（智利）"><option value="胜科 K300MW（印度）">
+<option value="寰泰 M&J（哈萨克）"><option value="寰泰 Beta 250MW（乌兹）">
+<option value="寰泰 Turan 700MW（哈萨）"><option value="智利 QE Purranque 18MW（智利）">
+<option value="哈萨克 KWE 48MW（哈萨克）"><option value="哈萨克阳光 50MW（哈萨克）">
+<option value="菲律宾 DMCI 12.5MW（菲律宾）"><option value="哈萨克阳光 Aktobe 200MW（哈萨克）">
+<option value="哈萨克 ENI 77MW（哈萨克）"><option value="Serentica（印度）">
+<option value="Avvada Narangwadi（印度）"><option value="Avaada（印度）">
+<option value="道达尔哈萨克 200MW（哈萨克）"><option value="投开 Alibunar 168MW（塞尔维亚）">
+<option value="印度 BC Jindal 150MW（印度）"><option value="巴西 Statkraft Gran Sul 416MW（巴西）">
+<option value="Nebras-Sojitz Uchkuduk 1000MW（乌兹）"><option value="AMEA 南非 Aysha 240MW（南非）">
+<option value="Gentari 132MW（印度）"><option value="Gentari 680MW（印度）">
+<option value="Purvah Green 300MW（印度）"><option value="Ayana 300MW（印度）">
+<option value="投开 Banat 1/3/4（塞尔维亚）"><option value="投开 Banat 2（塞尔维亚）">
+<option value="投开菲律宾 Balayan 104MW（菲律宾）"><option value="Orione（意大利）">
+<option value="Cerignola（意大利）"><option value="Venosa（意大利）">
+<option value="投开 Banat 5（塞尔维亚）"><option value="能建海投卡拉干达 Volskoye（哈萨）">
+<option value="AMEA Tomyris（乌兹）"><option value="AMEA Amunet（埃及）">
+<option value="Alcazar（埃及）"><option value="国电投巴甫洛达尔 1GW（哈萨）">
+<option value="巴拿马 SANTA CRUZ（巴拿马）"><option value="阳光哈萨克斯坦 Zeta 100MW（哈萨）">
+<option value="菲律宾 Acen Laguna 344.5MW（菲律宾）"><option value="泰国 EA WKK2 90MW（泰国）">
+<option value="泰国 EA 90MW（泰国）"><option value="越南 Taitam 45MW（越南）">
+<option value="越南 Phu Dien（越南）"><option value="越南中南项目群 300MW（越南）">
+<option value="哈萨克 HB 科克舍套 100MW（哈萨）"><option value="泰国 Gulf 第二批（泰国）">
+<option value="Masdar 乌兹 500MW（乌兹）"><option value="印度 Patel Green（印度）">
+<option value="越南星河新项目（越南）"><option value="Akuo Energy 印尼 Tegal 50MW（印尼）">
+<option value="SR变革专项"><option value="务虚会"><option value="认证跟踪"><option value="内部管理">
+</datalist>
+
+<script>
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('displayDate').textContent = today;
+let userName = '';
+let curInput = null;
+
+function openModal(inp) {
+  curInput = inp;
+  document.getElementById('modalText').value = inp.value || '';
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('modalText').focus(); }, 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  curInput = null;
+}
+
+function saveModal() {
+  if (curInput) {
+    curInput.value = document.getElementById('modalText').value;
+  }
+  closeModal();
+}
+
+function login() {
+  const n = document.getElementById('nameSelect').value;
+  if (!n) return;
+  userName = n;
+  document.getElementById('displayName').textContent = n;
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('mainForm').style.display = 'block';
+  for (let i=0;i<3;i++) addTask();
+}
+
+function logout() {
+  document.getElementById('loginBox').style.display = 'block';
+  document.getElementById('mainForm').style.display = 'none';
+  userName = '';
+}
+
+function addTask(pj, ph, tk, dl, rk) {
+  const tbody = document.getElementById('taskBody');
+  const row = tbody.insertRow();
+  row.innerHTML =
+    '<td><input class="t-project" value="'+(pj||'')+'" list="projectList" autocomplete="off"></td>'+
+    '<td><select class="t-phase">'+
+      '<option value="">选择</option>'+
+      '<option value="项目前期"'+(ph==='项目前期'?' selected':'')+'>项目前期</option>'+
+      '<option value="项目投标"'+(ph==='项目投标'?' selected':'')+'>项目投标</option>'+
+      '<option value="项目合同"'+(ph==='项目合同'?' selected':'')+'>项目合同</option>'+
+      '<option value="项目执行"'+(ph==='项目执行'?' selected':'')+'>项目执行</option></select></td>'+
+    '<td><input class="t-task task-input" value="'+(tk||'')+'" placeholder="点击输入事项" readonly onclick="openModal(this)"></td>'+
+    '<td><input class="t-deadline" type="date" value="'+(dl||'')+'"></td>'+
+    '<td><select class="t-risk">'+
+      '<option value="">选择</option>'+
+      '<option value="无"'+(rk==='无'?' selected':'')+'>🟢 无</option>'+
+      '<option value="低"'+(rk==='低'?' selected':'')+'>🟡 低</option>'+
+      '<option value="中"'+(rk==='中'?' selected':'')+'>🟠 中</option>'+
+      '<option value="高"'+(rk==='高'?' selected':'')+'>🔴 高</option></select></td>'+
+    '<td class="del-row" onclick="this.parentElement.remove()">×</td>';
+}
+
+function addNewItem() {
+  var tbody = document.getElementById('newItemsTable').querySelector('tbody');
+  var row = tbody.insertRow();
+  row.innerHTML = '<td><input class="new-region" placeholder="区域"></td><td><input class="new-project" placeholder="项目名称"></td><td><select class="new-phase"><option value="">阶段</option><option>前期跟踪</option><option>投标中</option><option>评标中</option><option>合同中</option><option>已签合同</option></select></td><td><input class="new-date" placeholder="接到日期"></td><td class="del-row" onclick="this.parentElement.remove()">×</td>';
+}
+
+function addHelp() {
+  var tbody = document.getElementById('helpTable').querySelector('tbody');
+  var row = tbody.insertRow();
+  row.innerHTML = '<td><input class="help-item" placeholder="事项"></td><td><input class="help-source" placeholder="协调部门"></td><td><input class="help-reason" placeholder="具体做什么"></td><td class="del-row" onclick="this.parentElement.remove()">×</td>';
+}
+
+function generate() {
+  var tasks=[], newItems=[], helps=[];
+  document.querySelectorAll('#taskBody tr').forEach(function(row){
+    var p=(row.querySelector('.t-project')||{}).value||'';
+    var ph=(row.querySelector('.t-phase')||{}).value||'';
+    var t=(row.querySelector('.t-task')||{}).value||'';
+    var d=(row.querySelector('.t-deadline')||{}).value||'';
+    var r=(row.querySelector('.t-risk')||{}).value||'';
+    if(p||t) tasks.push({project:p,phase:ph,task:t,deadline:d,risk:r});
+  });
+  document.querySelectorAll('#newItemsTable tbody tr').forEach(function(row){
+    var r=(row.querySelector('.new-region')||{}).value||'';
+    var p=(row.querySelector('.new-project')||{}).value||'';
+    var ph=(row.querySelector('.new-phase')||{}).value||'';
+    var d=(row.querySelector('.new-date')||{}).value||'';
+    if(p||r) newItems.push({region:r,project:p,phase:ph,date:d});
+  });
+  document.querySelectorAll('#helpTable tbody tr').forEach(function(row){
+    var it=(row.querySelector('.help-item')||{}).value||'';
+    var src=(row.querySelector('.help-source')||{}).value||'';
+    var rsn=(row.querySelector('.help-reason')||{}).value||'';
+    if(it) helps.push({item:it,source:src,reason:rsn});
+  });
+  var md='# 个人事项卡\n\n> 每周一小组会前花 3 分钟填好。项目 + 阶段 + 事项 + 截止 + 风险度，缺一不可。\n\n---\n\n**本周：`'+userName+'`　　`'+today+'`**\n\n| 项目 | 阶段 | 事项 | 截止 | 风险度 |\n|------|------|------|:---:|:---:|\n';
+  tasks.forEach(function(t){ md+='| '+t.project+' | '+t.phase+' | '+t.task+' | '+t.deadline+' | '+t.risk+' |\n'; });
+  if(!tasks.length) md+='| | | | | |\n';
+  if(newItems.length){ md+='\n---\n\n**本周新增项目：**\n\n'; newItems.forEach(function(n){ md+='- '+n.region+' / '+n.project+' / '+n.phase+' / '+n.date+'\n'; }); }
+  if(helps.length){ md+='\n**需协调事项：**\n\n'; helps.forEach(function(h){ md+='- '+h.item+' / '+h.source+' / '+h.reason+'\n'; }); }
+  document.getElementById('output').textContent=md;
+}
+
+var FEISHU_URL = localStorage.getItem('tbm_feishu_url') || '';
+
+function setFeishuUrl() {
+  var url = prompt('请输入飞书机器人 Webhook 地址（只需设置一次）：\n\n如何获取：飞书群 → 群设置 → 群机器人 → 添加自定义机器人 → 复制 Webhook 地址', FEISHU_URL);
+  if (url) { FEISHU_URL = url; localStorage.setItem('tbm_feishu_url', url); alert('✅ 已保存！'); }
+}
+
+function submitData() {
+  if (!FEISHU_URL) { alert('请先点击「⚙ 配置提交地址」设置飞书机器人 Webhook 地址'); return; }
+  var tasks=[], newItems=[], helps=[];
+  document.querySelectorAll('#taskBody tr').forEach(function(row){
+    var p=(row.querySelector('.t-project')||{}).value||'';
+    var ph=(row.querySelector('.t-phase')||{}).value||'';
+    var t=(row.querySelector('.t-task')||{}).value||'';
+    var d=(row.querySelector('.t-deadline')||{}).value||'';
+    var r=(row.querySelector('.t-risk')||{}).value||'';
+    if(p||t) tasks.push(p+' | '+ph+' | '+t+' | '+d+' | '+r);
+  });
+  document.querySelectorAll('#newItemsTable tbody tr').forEach(function(row){
+    var r=(row.querySelector('.new-region')||{}).value||'';
+    var p=(row.querySelector('.new-project')||{}).value||'';
+    var ph=(row.querySelector('.new-phase')||{}).value||'';
+    var d=(row.querySelector('.new-date')||{}).value||'';
+    if(p||r) newItems.push(r+' / '+p+' / '+ph+' / '+d);
+  });
+  document.querySelectorAll('#helpTable tbody tr').forEach(function(row){
+    var it=(row.querySelector('.help-item')||{}).value||'';
+    var src=(row.querySelector('.help-source')||{}).value||'';
+    var rsn=(row.querySelector('.help-reason')||{}).value||'';
+    if(it) helps.push(it+' | '+src+' | '+rsn);
+  });
+
+  var lines = [];
+  lines.push('**'+userName+'** 的周报 `'+today+'`');
+  lines.push('');
+  if (tasks.length) {
+    lines.push('**本周事项：**');
+    tasks.forEach(function(t){ lines.push('- '+t); });
+    lines.push('');
+  }
+  if (newItems.length) {
+    lines.push('**本周新增项目：**');
+    newItems.forEach(function(n){ lines.push('- '+n); });
+    lines.push('');
+  }
+  if (helps.length) {
+    lines.push('**需协调事项：**');
+    helps.forEach(function(h){ lines.push('- '+h); });
+  }
+  if (!tasks.length && !newItems.length && !helps.length) {
+    lines.push('（无事项）');
+  }
+
+  var msg = { msg_type: 'text', content: { text: lines.join('\n') } };
+  var st = document.getElementById('submitStatus');
+  var btn = document.getElementById('submitBtn');
+  st.textContent = '提交中...'; st.style.color = '#999'; btn.disabled = true;
+  fetch(FEISHU_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(msg) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.code === 0) { st.textContent = '✅ 已发到飞书群！'; st.style.color = '#2ecc71'; }
+      else { st.textContent = '❌ 失败：' + (d.msg||'未知'); st.style.color = '#e65c00'; }
+    })
+    .catch(function(e){ st.textContent = '❌ 网络错误'; st.style.color = '#e65c00'; })
+    .finally(function(){ btn.disabled = false; });
+}
+
+function copyMD() {
+  generate();
+  navigator.clipboard.writeText(document.getElementById('output').textContent).then(function(){
+    var m=document.getElementById('copiedMsg'); m.style.display='inline'; setTimeout(function(){ m.style.display='none'; },2000);
+  });
+}
+</script>
+</body>
+</html>
